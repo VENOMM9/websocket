@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>driver</title>
+</head>
+<body>
+    <h1>Driver App</h1>
+    <p><strong>Notifications:</strong></p>
+    <div id="notification"></div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <script>
+      const driverId = Math.floor(Math.random() * 10000).toString();
+      localStorage.setItem("driverId", driverId);
+      localStorage.setItem("driverName", "Victor Foaa");
+
+      const socket = io("http://localhost:3400", {
+        query: {
+          name: localStorage.getItem("driverName"),
+          user_type: "driver",
+          id: localStorage.getItem("driverId"),
+        },
+      });
+
+      socket.on("connect", () => {
+        console.log("connected successfully");
+      });
+
+      socket.on("driverCreated", (data) => {
+  if (data && data.driver && data.driver.id) {
+    console.log(data);
+    localStorage.setItem("driverId", data.driver.id);
+  }
+});
+
+      socket.on("sendRequest", (data) => {
+        const notification = document.getElementById("notification");
+
+        // Check if the order element already exists
+        const existingOrderElement = document.getElementById(`${data.orderId}-orderCard`);
+        if (existingOrderElement) {
+          return;
+        }
+
+        const orderCard = document.createElement("div");
+        orderCard.classList.add("card");
+        orderCard.id = `${data.orderId}-orderCard`;
+        orderCard.innerHTML = `
+          <h5 class="order-title">${data.sender.name} is requesting a ride</h5>
+          <p class="order-text">Location: ${data.location}</p>
+          <p class="order-text">Destination: ${data.destination}</p>
+          <p class="order-text">Price: N${data.price}</p>
+          <button id="${data.orderId}-acceptOrder" class="acceptButton">Accept</button>
+          <button id="${data.orderId}-rejectOrder" class="rejectButton">Reject</button>
+        `;
+
+        notification.appendChild(orderCard);
+
+        const acceptOrderBtn = document.getElementById(`${data.orderId}-acceptOrder`);
+        const rejectOrderBtn = document.getElementById(`${data.orderId}-rejectOrder`);
+
+        acceptOrderBtn.addEventListener("click", () => {
+          socket.emit("acceptOrder", {
+            id: data.orderId,
+            driver_id: localStorage.getItem("driverId"),
+          });
+        });
+
+        rejectOrderBtn.addEventListener("click", () => {
+          socket.emit("rejectOrder", {
+            id: data.orderId,
+            driver_id: localStorage.getItem("driverId"),
+          });
+        });
+      });
+
+      socket.on("orderAccepted", (data) => {
+        const acceptOrderBtn = document.getElementById(`${data.data.orderId}-acceptOrder`);
+        const rejectOrderBtn = document.getElementById(`${data.data.orderId}-rejectOrder`);
+
+        if (acceptOrderBtn) {
+          acceptOrderBtn.disabled = true;
+          acceptOrderBtn.innerHTML = "Accepted";
+        }
+        if (rejectOrderBtn) {
+          rejectOrderBtn.disabled = true;
+        }
+      });
+
+      socket.on("orderRejected", (data) => {
+        const acceptOrderBtn = document.getElementById(`${data.data.orderId}-acceptOrder`);
+        const rejectOrderBtn = document.getElementById(`${data.data.orderId}-rejectOrder`);
+
+        if (acceptOrderBtn) {
+          acceptOrderBtn.disabled = true;
+        }
+
+        if (rejectOrderBtn) {
+          rejectOrderBtn.disabled = true;
+          rejectOrderBtn.innerHTML = "Rejected";
+        }
+      });
+
+      // Listen for the "orderPlaced" event
+      socket.on("orderPlaced", (data) => {
+        const notification = document.getElementById("notification");
+
+        const orderCard = document.createElement("div");
+        orderCard.classList.add("card");
+        orderCard.innerHTML = `
+          <h5 class="order-title">${data.order.sender.name} has placed an order</h5>
+          <p class="order-text">Location: ${data.order.location}</p>
+          <p class="order-text">Destination: ${data.order.destination}</p>
+          <p class="order-text">Price: N${data.order.price}</p>
+        `;
+
+        notification.appendChild(orderCard);
+      });
+
+      // Add the following script to send the request when the page loads
+     
+    
+    </script>
+  </body>
+</html>

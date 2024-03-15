@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sender</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        div {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        #username {
+            font-weight: bold;
+        }
+    </style>
+
+</head>
+<body>
+    <form id="form">
+        <p>Username: <span id="username"></span></p>
+        <p>Location: <input type="text" id="location"></p>
+        <p>Destination: <input type="text" id="destination"></p>
+        <p>Price: <input type="number" id="price"></p>
+
+       
+
+
+        <input type="submit" class="btn btn-primary" value="Request">
+
+    </form>
+    <label style="margin-top: 20px;"><b>Notifications:</b></label>
+    <div style="border: 1px solid rgb(120, 82, 82); min-height: 30vh;" id="notification">
+
+    </div>
+    <script>
+    const driverId = '1234'; // Replace with your actual driverId
+    localStorage.setItem('driverId', driverId);
+</script>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="sender.js"></script>
+
+<script>
+
+const userName = prompt('Enter your username:');
+
+const usernameElement = document.getElementById('username');
+const locationInput = document.getElementById('location');
+const destinationInput = document.getElementById('destination');
+const priceInput = document.getElementById('price');
+
+
+
+usernameElement.textContent = userName;
+
+const socket = io('http://localhost:3400', {
+    query: {
+        user_type: 'sender',
+        name: userName,
+        driverId: localStorage.getItem('driverId'), // Get driverId from localStorage
+
+    },
+});
+
+    socket.on('connect', () => {
+    console.log('Connected to the server');
+});
+
+
+
+
+socket.on('serverMessage', (message) => {
+    console.log('Server says:', message);
+});
+
+const senderId = Math.floor(Math.random() * 10000).toString();
+
+
+    const form = document.getElementById('form');
+
+    form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const location = locationInput.value;
+    const destination = destinationInput.value;
+    const price = priceInput.value;
+
+
+    socket.emit('sendRequest', {
+        location: location,
+        destination: destination,
+        price: price,
+        sender: {
+        name: userName,
+        id: senderId
+    },
+        driver: {
+            id: driverId,
+            name: 'Victor Foaa',
+        },
+        orderId: Math.floor(Math.random() * 10000).toString()
+    });
+});
+
+socket.on('orderPlaced', (data) => {
+    console.log('Order placed:', data.order);
+});
+
+    socket.on('orderAccepted', (data) => {
+        console.log(data);
+    
+        const notificationContainer = document.getElementById('notification');
+
+        const div = document.createElement('div');
+
+        div.innerHTML = `<div style="margin: 10px;" class="card">
+            <h5 class="card-header">Order Request</h5>
+            <div class="card-body">
+                <h5 class="card-title">${data.order.driver.name} has accepted your ride</h5>
+                <p class="card-text">Current Location: ${data.order.location}</p>
+                <p class="card-text">Destination: ${data.order.destination}</p>
+                <p class="card-text">Price: N${data.order.price}</p>
+            </div>
+            </div>`
+        
+        notificationContainer.appendChild(div)
+    })
+
+    socket.on('orderRejected', (data) => {
+        console.log(data);
+    
+        const notificationContainer = document.getElementById('notification');
+
+        const div = document.createElement('div');
+
+        div.innerHTML = `<div style="margin: 10px;" class="card">
+            <h5 class="card-header">Order Request</h5>
+            <div class="card-body">
+                <h5 class="card-title">${data.order.driver.name} has rejected your ride</h5>
+                <p class="card-text">Current Location: ${data.order.location}</p>
+                <p class="card-text">Destination: ${data.order.destination}</p>
+                <p class="card-text">Price: N${data.order.price}</p>
+            </div>
+            </div>`
+        
+        notificationContainer.appendChild(div)
+    })
+
+</script>
+
+</body>
+</html>
